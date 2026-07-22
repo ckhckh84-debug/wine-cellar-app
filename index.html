@@ -11,10 +11,12 @@
 <div id="auth-view" class="view">
   <div class="auth-card">
     <h1>🍷 내 와인 셀러</h1>
-    <p class="muted">이메일로 로그인 링크를 받아 시작하세요.</p>
+    <p class="muted">이메일과 비밀번호로 로그인하세요.</p>
     <form id="login-form">
       <input type="email" id="login-email" placeholder="you@example.com" required autocomplete="email" />
-      <button type="submit">로그인 링크 받기</button>
+      <input type="password" id="login-password" placeholder="비밀번호 (6자 이상)" required autocomplete="current-password" minlength="6" />
+      <button type="submit">로그인</button>
+      <button type="button" id="signup-btn" class="ghost-btn">처음이신가요? 계정 만들기</button>
     </form>
     <p id="auth-message" class="muted"></p>
   </div>

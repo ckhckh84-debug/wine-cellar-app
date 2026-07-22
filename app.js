@@ -41,15 +41,30 @@ function applyAuthView() {
 $("#login-form").addEventListener("submit", async (e) => {
   e.preventDefault();
   const email = $("#login-email").value.trim();
+  const password = $("#login-password").value;
   const msg = $("#auth-message");
-  msg.textContent = "전송 중...";
-  const { error } = await supabaseClient.auth.signInWithOtp({
-    email,
-    options: { emailRedirectTo: window.location.href },
-  });
-  msg.textContent = error
-    ? `오류: ${error.message}`
-    : "이메일로 로그인 링크를 보냈습니다. 메일함을 확인하세요.";
+  msg.textContent = "로그인 중...";
+  const { error } = await supabaseClient.auth.signInWithPassword({ email, password });
+  msg.textContent = error ? `오류: ${error.message}` : "";
+});
+
+$("#signup-btn").addEventListener("click", async () => {
+  const email = $("#login-email").value.trim();
+  const password = $("#login-password").value;
+  const msg = $("#auth-message");
+  if (!email || password.length < 6) {
+    msg.textContent = "이메일과 6자 이상의 비밀번호를 입력하세요.";
+    return;
+  }
+  msg.textContent = "계정 생성 중...";
+  const { data, error } = await supabaseClient.auth.signUp({ email, password });
+  if (error) {
+    msg.textContent = `오류: ${error.message}`;
+    return;
+  }
+  msg.textContent = data.session
+    ? "계정이 생성되었습니다."
+    : "계정이 생성되었습니다. 이메일 확인이 필요하면 메일함을 확인하세요.";
 });
 
 $("#logout-btn").addEventListener("click", async () => {
