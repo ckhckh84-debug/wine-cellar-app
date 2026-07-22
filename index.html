@@ -1,0 +1,113 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+<title>내 와인 셀러</title>
+<link rel="stylesheet" href="style.css" />
+</head>
+<body>
+
+<div id="auth-view" class="view">
+  <div class="auth-card">
+    <h1>🍷 내 와인 셀러</h1>
+    <p class="muted">이메일로 로그인 링크를 받아 시작하세요.</p>
+    <form id="login-form">
+      <input type="email" id="login-email" placeholder="you@example.com" required autocomplete="email" />
+      <button type="submit">로그인 링크 받기</button>
+    </form>
+    <p id="auth-message" class="muted"></p>
+  </div>
+</div>
+
+<div id="app-view" class="view hidden">
+  <header>
+    <h1>🍷 내 와인 셀러</h1>
+    <button id="logout-btn" class="ghost-btn">로그아웃</button>
+  </header>
+
+  <nav class="tabs">
+    <button class="tab-btn active" data-tab="cellar">재고</button>
+    <button class="tab-btn" data-tab="add">와인 추가</button>
+  </nav>
+
+  <section id="tab-cellar" class="tab-panel">
+    <div id="drink-window-alert" class="alert hidden"></div>
+    <div class="table-wrap">
+      <table id="wine-table">
+        <thead>
+          <tr>
+            <th>와인명</th>
+            <th>빈티지</th>
+            <th>수량</th>
+            <th>보관위치</th>
+            <th>음용시기</th>
+            <th></th>
+          </tr>
+        </thead>
+        <tbody id="wine-table-body"></tbody>
+      </table>
+      <p id="empty-msg" class="muted hidden">등록된 와인이 없습니다. "와인 추가" 탭에서 추가해보세요.</p>
+    </div>
+  </section>
+
+  <section id="tab-add" class="tab-panel hidden">
+    <form id="wine-form">
+      <label>와인명 *<input type="text" name="name" required /></label>
+      <label>빈티지<input type="number" name="vintage" min="1900" max="2100" /></label>
+      <label>생산자<input type="text" name="producer" /></label>
+      <label>품종<input type="text" name="variety" placeholder="예: 카베르네 소비뇽 70%, 메를로 30%" /></label>
+      <label>원산지(지역)<input type="text" name="region" /></label>
+      <label>원산지(국가)<input type="text" name="country" /></label>
+      <label>스타일
+        <select name="style">
+          <option value="레드">레드</option>
+          <option value="화이트">화이트</option>
+          <option value="스파클링">스파클링</option>
+          <option value="로제">로제</option>
+          <option value="주정강화">주정강화</option>
+          <option value="기타">기타</option>
+        </select>
+      </label>
+      <label>수량<input type="number" name="quantity" min="0" value="1" /></label>
+      <label>보관위치<input type="text" name="storage_location" /></label>
+      <label>구매일<input type="date" name="purchase_date" /></label>
+      <label>구매가<input type="number" name="price" min="0" step="0.01" /></label>
+      <label>음용 시작연도<input type="number" name="drink_window_start" min="1900" max="2100" /></label>
+      <label>음용 종료연도<input type="number" name="drink_window_end" min="1900" max="2100" /></label>
+      <label>페어링 태그(쉼표 구분)<input type="text" name="food_pairing_tags" placeholder="스테이크, 치즈" /></label>
+      <label>나의 평점(5점 만점)<input type="number" name="my_rating" min="0" max="5" step="0.5" /></label>
+      <button type="submit">저장</button>
+      <p id="add-message" class="muted"></p>
+    </form>
+  </section>
+</div>
+
+<div id="wine-detail-modal" class="modal hidden">
+  <div class="modal-content">
+    <button id="close-modal-btn" class="ghost-btn close-btn">닫기</button>
+    <div id="wine-detail-body"></div>
+    <hr />
+    <h3>시음노트 추가</h3>
+    <form id="tasting-form">
+      <input type="hidden" name="wine_id" />
+      <label>날짜<input type="date" name="note_date" /></label>
+      <label>향<input type="text" name="aroma" /></label>
+      <label>맛<input type="text" name="taste" /></label>
+      <label>바디감<input type="text" name="body" placeholder="예: 미디엄-풀바디" /></label>
+      <label>여운<input type="text" name="finish" /></label>
+      <label>나의 평점(5점 만점)<input type="number" name="my_rating" min="0" max="5" step="0.5" /></label>
+      <label>코멘트<textarea name="comment" rows="3"></textarea></label>
+      <button type="submit">시음노트 저장</button>
+    </form>
+    <h3>시음노트 기록</h3>
+    <ul id="tasting-notes-list"></ul>
+  </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
+<script src="config.js"></script>
+<script src="supabaseClient.js"></script>
+<script src="app.js"></script>
+</body>
+</html>
