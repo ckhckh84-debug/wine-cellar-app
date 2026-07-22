@@ -31,6 +31,7 @@
   <nav class="tabs">
     <button class="tab-btn active" data-tab="cellar">재고</button>
     <button class="tab-btn" data-tab="add">와인 추가</button>
+    <button class="tab-btn" data-tab="settings">설정</button>
   </nav>
 
   <section id="tab-cellar" class="tab-panel">
@@ -54,6 +55,21 @@
   </section>
 
   <section id="tab-add" class="tab-panel hidden">
+    <div class="ai-box">
+      <strong>📷 라벨 사진으로 자동 채우기</strong>
+      <p class="muted">사진을 찍거나 선택하면 AI가 라벨을 읽어 아래 항목을 채웁니다. 확인 후 저장하세요.</p>
+      <input type="file" id="label-photo-input" accept="image/*" capture="environment" />
+      <button type="button" id="analyze-label-btn">라벨 분석하기</button>
+      <p id="label-ai-message" class="muted"></p>
+    </div>
+
+    <div class="ai-box">
+      <strong>🔍 품종·음용시기 확인 (AI + 웹 검색)</strong>
+      <p class="muted">와인명·생산자·빈티지를 입력한 뒤 눌러주세요. 출처가 확인된 경우에만 채웁니다.</p>
+      <button type="button" id="lookup-info-btn">품종/음용시기 검색</button>
+      <p id="lookup-ai-message" class="muted"></p>
+    </div>
+
     <form id="wine-form">
       <label>와인명 *<input type="text" name="name" required /></label>
       <label>빈티지<input type="number" name="vintage" min="1900" max="2100" /></label>
@@ -83,6 +99,21 @@
       <p id="add-message" class="muted"></p>
     </form>
   </section>
+
+  <section id="tab-settings" class="tab-panel hidden">
+    <h3>AI 기능 설정</h3>
+    <p class="muted">
+      라벨 사진 인식과 품종/음용시기 검색 기능은 Anthropic Claude API를 사용합니다.
+      본인의 API 키를 입력하면 이 브라우저(기기)에만 저장되며, 서버로 전송되지 않습니다.
+      <a href="https://console.anthropic.com/settings/keys" target="_blank" rel="noopener">console.anthropic.com</a>에서 발급받을 수 있습니다.
+    </p>
+    <form id="api-key-form">
+      <label>Anthropic API 키<input type="password" id="api-key-input" placeholder="sk-ant-..." autocomplete="off" /></label>
+      <button type="submit">저장</button>
+      <button type="button" id="clear-api-key-btn" class="ghost-btn">삭제</button>
+      <p id="api-key-status" class="muted"></p>
+    </form>
+  </section>
 </div>
 
 <div id="wine-detail-modal" class="modal hidden">
@@ -110,6 +141,7 @@
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
 <script src="config.js"></script>
 <script src="supabaseClient.js"></script>
+<script src="claude.js"></script>
 <script src="app.js"></script>
 </body>
 </html>

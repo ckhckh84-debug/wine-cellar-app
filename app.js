@@ -270,4 +270,83 @@ $("#tasting-form").addEventListener("submit", async (e) => {
   loadTastingNotes(currentWineId);
 });
 
+// ---------- AI settings & assist ----------
+
+function refreshApiKeyStatus() {
+  const status = $("#api-key-status");
+  status.textContent = getClaudeApiKey() ? "API 키가 저장되어 있습니다." : "저장된 API 키가 없습니다.";
+}
+
+$("#api-key-form").addEventListener("submit", (e) => {
+  e.preventDefault();
+  const val = $("#api-key-input").value.trim();
+  if (!val) return;
+  setClaudeApiKey(val);
+  $("#api-key-input").value = "";
+  refreshApiKeyStatus();
+});
+
+$("#clear-api-key-btn").addEventListener("click", () => {
+  setClaudeApiKey(null);
+  refreshApiKeyStatus();
+});
+
+refreshApiKeyStatus();
+
+$("#analyze-label-btn").addEventListener("click", async () => {
+  const fileInput = $("#label-photo-input");
+  const msg = $("#label-ai-message");
+  const file = fileInput.files[0];
+  if (!file) {
+    msg.textContent = "먼저 사진을 선택해주세요.";
+    return;
+  }
+  msg.textContent = "라벨 분석 중...";
+  try {
+    const base64 = await fileToBase64(file);
+    const result = await analyzeWineLabel(base64, file.type || "image/jpeg");
+    const form = $("#wine-form");
+    if (result.name) form.elements.name.value = result.name;
+    if (result.vintage) form.vintage.value = result.vintage;
+    if (result.producer) form.producer.value = result.producer;
+    if (result.variety) form.variety.value = result.variety;
+    if (result.region) form.region.value = result.region;
+    if (result.country) form.country.value = result.country;
+    if (result.style) form.elements.style.value = result.style;
+    msg.textContent = result.uncertain_fields?.length
+      ? `채워졌습니다. 확인 필요: ${result.uncertain_fields.join(", ")}`
+      : "채워졌습니다. 내용을 확인 후 저장하세요.";
+  } catch (err) {
+    msg.textContent = `오류: ${err.message}`;
+  }
+});
+
+$("#lookup-info-btn").addEventListener("click", async () => {
+  const msg = $("#lookup-ai-message");
+  const form = $("#wine-form");
+  const name = form.elements.name.value.trim();
+  if (!name) {
+    msg.textContent = "먼저 와인명을 입력해주세요.";
+    return;
+  }
+  msg.textContent = "검색 중... (웹 검색 사용, 몇 초 걸릴 수 있습니다)";
+  try {
+    const result = await lookupVarietyAndDrinkWindow({
+      name,
+      producer: form.producer.value.trim(),
+      vintage: form.vintage.value.trim(),
+    });
+    if (result.confidence === "확인됨") {
+      if (result.variety) form.variety.value = result.variety;
+      if (result.drink_window_start) form.drink_window_start.value = result.drink_window_start;
+      if (result.drink_window_end) form.drink_window_end.value = result.drink_window_end;
+      msg.textContent = `확인됨. 출처: ${result.sources.join(", ") || "명시 안됨"}`;
+    } else {
+      msg.textContent = `${result.confidence}: ${result.note || "출처를 확인할 수 없어 채우지 않았습니다."}`;
+    }
+  } catch (err) {
+    msg.textContent = `오류: ${err.message}`;
+  }
+});
+
 initAuth();
