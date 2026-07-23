@@ -105,11 +105,51 @@
   </section>
 
   <section id="tab-log" class="tab-panel hidden">
-    <div class="ai-box">
-      <label>포도 품종 검색<input type="text" id="log-filter-variety" placeholder="예: 카베르네" /></label>
-      <label>함께 먹은 음식 검색<input type="text" id="log-filter-food" placeholder="예: 회, 스테이크" /></label>
-      <button type="button" id="log-search-btn">검색</button>
-    </div>
+    <form id="log-filter-form" class="ai-box log-filters">
+      <label>검색어(와인명·생산자)<input type="text" id="log-filter-keyword" placeholder="예: Opus One" /></label>
+      <label>포도 품종<input type="text" id="log-filter-variety" placeholder="예: 카베르네" /></label>
+      <label>국가<input type="text" id="log-filter-country" placeholder="예: 프랑스" /></label>
+      <label>지역<input type="text" id="log-filter-region" placeholder="예: 보르도" /></label>
+      <label>스타일
+        <select id="log-filter-style">
+          <option value="">전체</option>
+          <option value="레드">레드</option>
+          <option value="화이트">화이트</option>
+          <option value="스파클링">스파클링</option>
+          <option value="로제">로제</option>
+          <option value="주정강화">주정강화</option>
+          <option value="기타">기타</option>
+        </select>
+      </label>
+      <label>함께 먹은 음식<input type="text" id="log-filter-food" placeholder="예: 회, 스테이크" /></label>
+      <label>향<select id="log-filter-aroma"><option value="">전체</option></select></label>
+      <label>나의 평점
+        <select id="log-filter-rating">
+          <option value="">전체</option>
+          <option value="5">5점</option>
+          <option value="4">4점 이상</option>
+          <option value="3">3점 이상</option>
+          <option value="2">2점 이상</option>
+        </select>
+      </label>
+      <label>기간
+        <select id="log-filter-period">
+          <option value="">전체</option>
+          <option value="1m">최근 1개월</option>
+          <option value="3m">최근 3개월</option>
+          <option value="year">올해</option>
+        </select>
+      </label>
+      <label>정렬
+        <select id="log-filter-sort">
+          <option value="date_desc">최신순</option>
+          <option value="rating_desc">평점 높은순</option>
+          <option value="rating_asc">평점 낮은순</option>
+        </select>
+      </label>
+      <button type="submit">검색</button>
+      <button type="button" id="log-reset-btn" class="ghost-btn">초기화</button>
+    </form>
     <ul id="tasting-log-list" class="tasting-log-list"></ul>
     <p id="tasting-log-empty" class="muted hidden">조건에 맞는 시음노트가 없습니다.</p>
   </section>
@@ -157,7 +197,9 @@
       <label>여운<input type="text" name="finish" /></label>
       <label>함께 먹은 음식<input type="text" name="food_pairing" placeholder="예: 스테이크, 치즈 플래터" /></label>
       <label>나의 평점(5점 만점)<input type="number" name="my_rating" min="0" max="5" step="0.5" /></label>
-      <label>코멘트<textarea name="comment" rows="3"></textarea></label>
+      <label>코멘트<textarea name="comment" rows="4" placeholder="마시면서 느낀 점을 자유롭게 적어보세요"></textarea></label>
+      <button type="button" id="cleanup-comment-btn" class="ghost-btn">🪄 AI로 코멘트 정리</button>
+      <p id="cleanup-comment-message" class="muted"></p>
       <button type="submit" id="tasting-submit-btn">시음노트 저장</button>
       <button type="button" id="tasting-cancel-edit-btn" class="ghost-btn hidden">수정 취소</button>
     </form>

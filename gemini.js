@@ -132,6 +132,31 @@ async function lookupVarietyAndDrinkWindow({ name, producer, vintage }) {
   return extractFinalJson(response);
 }
 
+async function cleanupTastingComment(rawText) {
+  const response = await callGemini({
+    contents: [
+      {
+        role: "user",
+        parts: [
+          {
+            text:
+              "다음은 와인을 마시면서 두서없이 적은 시음 메모입니다. 읽기 좋게 정리해주세요. " +
+              "원문에 없는 내용을 지어내거나 과장하지 말고, 있는 내용만 정리하세요. " +
+              "내용이 향/맛/여운/전체 느낌 등으로 나눌 만큼 충분하면 항목별로 나눠 정리하고, " +
+              "짧으면 무리하게 항목화하지 말고 자연스러운 문장 한두 개로 정리하세요. " +
+              "정리된 텍스트만 출력하고 다른 설명은 붙이지 마세요.\n\n" +
+              `원문:\n${rawText}`,
+          },
+        ],
+      },
+    ],
+  });
+  const candidate = response.candidates?.[0];
+  const part = candidate?.content?.parts?.find((p) => p.text);
+  if (!part) throw new Error("응답에 텍스트가 없습니다.");
+  return part.text.trim();
+}
+
 function fileToBase64(file) {
   return new Promise((resolve, reject) => {
     const reader = new FileReader();

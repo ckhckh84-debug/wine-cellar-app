@@ -228,6 +228,21 @@ function populateRatingSelects() {
 }
 populateRatingSelects();
 
+function populateAromaFilterSelect() {
+  const select = $("#log-filter-aroma");
+  const allTags = [
+    ...AROMA_WHEEL.primary.flatMap((c) => c.tags),
+    ...AROMA_WHEEL.secondary.flatMap((c) => c.tags),
+  ];
+  for (const tag of allTags) {
+    const opt = document.createElement("option");
+    opt.value = tag;
+    opt.textContent = tag;
+    select.appendChild(opt);
+  }
+}
+populateAromaFilterSelect();
+
 function renderAromaPicker(containerId, tier) {
   const container = $(`#${containerId}`);
   container.innerHTML = "";
@@ -411,36 +426,108 @@ $("#tasting-form").addEventListener("submit", async (e) => {
 
 // ---------- Tasting log search ----------
 
+function withinPeriod(noteDateStr, period) {
+  if (!period) return true;
+  const noteDate = new Date(noteDateStr);
+  const now = new Date();
+  if (period === "1m") {
+    const from = new Date(now);
+    from.setMonth(from.getMonth() - 1);
+    return noteDate >= from;
+  }
+  if (period === "3m") {
+    const from = new Date(now);
+    from.setMonth(from.getMonth() - 3);
+    return noteDate >= from;
+  }
+  if (period === "year") {
+    return noteDate.getFullYear() === now.getFullYear();
+  }
+  return true;
+}
+
 async function searchTastingLog() {
-  const varietyTerm = $("#log-filter-variety").value.trim();
-  const foodTerm = $("#log-filter-food").value.trim();
-
-  let query = supabaseClient
-    .from("tasting_notes")
-    .select("*, wines!inner(name, vintage, variety)")
-    .order("note_date", { ascending: false });
-  if (varietyTerm) query = query.ilike("wines.variety", `%${varietyTerm}%`);
-  if (foodTerm) query = query.ilike("food_pairing", `%${foodTerm}%`);
-
-  const { data, error } = await query;
   const list = $("#tasting-log-list");
   const emptyMsg = $("#tasting-log-empty");
+
+  const { data, error } = await supabaseClient
+    .from("tasting_notes")
+    .select("*, wines(name, producer, vintage, variety, country, region, style)");
+
   list.innerHTML = "";
   if (error) {
     console.error(error);
     return;
   }
-  if (!data || data.length === 0) {
+
+  const keyword = $("#log-filter-keyword").value.trim().toLowerCase();
+  const varietyTerm = $("#log-filter-variety").value.trim().toLowerCase();
+  const countryTerm = $("#log-filter-country").value.trim().toLowerCase();
+  const regionTerm = $("#log-filter-region").value.trim().toLowerCase();
+  const styleTerm = $("#log-filter-style").value;
+  const foodTerm = $("#log-filter-food").value.trim().toLowerCase();
+  const aromaTerm = $("#log-filter-aroma").value;
+  const minRating = Number($("#log-filter-rating").value || 0);
+  const period = $("#log-filter-period").value;
+  const sortBy = $("#log-filter-sort").value;
+
+  let results = (data || []).filter((n) => {
+    const w = n.wines || {};
+    if (keyword && !`${w.name ?? ""} ${w.producer ?? ""}`.toLowerCase().includes(keyword)) return false;
+    if (varietyTerm && !(w.variety ?? "").toLowerCase().includes(varietyTerm)) return false;
+    if (countryTerm && !(w.country ?? "").toLowerCase().includes(countryTerm)) return false;
+    if (regionTerm && !(w.region ?? "").toLowerCase().includes(regionTerm)) return false;
+    if (styleTerm && w.style !== styleTerm) return false;
+    if (foodTerm && !(n.food_pairing ?? "").toLowerCase().includes(foodTerm)) return false;
+    if (aromaTerm && ![...(n.aroma_primary || []), ...(n.aroma_secondary || [])].includes(aromaTerm)) return false;
+    if (minRating && !(n.my_rating >= minRating)) return false;
+    if (!withinPeriod(n.note_date, period)) return false;
+    return true;
+  });
+
+  results.sort((a, b) => {
+    if (sortBy === "rating_desc") return (b.my_rating ?? -1) - (a.my_rating ?? -1);
+    if (sortBy === "rating_asc") return (a.my_rating ?? 99) - (b.my_rating ?? 99);
+    return new Date(b.note_date) - new Date(a.note_date);
+  });
+
+  if (results.length === 0) {
     emptyMsg.classList.remove("hidden");
     return;
   }
   emptyMsg.classList.add("hidden");
-  for (const n of data) {
+  for (const n of results) {
     list.appendChild(renderTastingNoteItem(n, { showWineName: true, wine: n.wines }));
   }
 }
 
-$("#log-search-btn").addEventListener("click", searchTastingLog);
+$("#log-filter-form").addEventListener("submit", (e) => {
+  e.preventDefault();
+  searchTastingLog();
+});
+
+$("#log-reset-btn").addEventListener("click", () => {
+  $("#log-filter-form").reset();
+  searchTastingLog();
+});
+
+$("#cleanup-comment-btn").addEventListener("click", async () => {
+  const msg = $("#cleanup-comment-message");
+  const textarea = $("#tasting-form [name=comment]");
+  const raw = textarea.value.trim();
+  if (!raw) {
+    msg.textContent = "정리할 코멘트를 먼저 입력해주세요.";
+    return;
+  }
+  msg.textContent = "정리 중...";
+  try {
+    const cleaned = await cleanupTastingComment(raw);
+    textarea.value = cleaned;
+    msg.textContent = "정리되었습니다. 필요하면 직접 수정하세요.";
+  } catch (err) {
+    msg.textContent = `오류: ${err.message}`;
+  }
+});
 
 // ---------- AI settings & assist ----------
 
