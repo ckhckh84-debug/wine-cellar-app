@@ -31,6 +31,7 @@
   <nav class="tabs">
     <button class="tab-btn active" data-tab="cellar">재고</button>
     <button class="tab-btn" data-tab="add">와인 추가</button>
+    <button class="tab-btn" data-tab="log">시음기록</button>
     <button class="tab-btn" data-tab="settings">설정</button>
   </nav>
 
@@ -103,6 +104,16 @@
     </form>
   </section>
 
+  <section id="tab-log" class="tab-panel hidden">
+    <div class="ai-box">
+      <label>포도 품종 검색<input type="text" id="log-filter-variety" placeholder="예: 카베르네" /></label>
+      <label>함께 먹은 음식 검색<input type="text" id="log-filter-food" placeholder="예: 회, 스테이크" /></label>
+      <button type="button" id="log-search-btn">검색</button>
+    </div>
+    <ul id="tasting-log-list" class="tasting-log-list"></ul>
+    <p id="tasting-log-empty" class="muted hidden">조건에 맞는 시음노트가 없습니다.</p>
+  </section>
+
   <section id="tab-settings" class="tab-panel hidden">
     <h3>AI 기능 설정</h3>
     <p class="muted">
@@ -124,17 +135,31 @@
     <button id="close-modal-btn" class="ghost-btn close-btn">닫기</button>
     <div id="wine-detail-body"></div>
     <hr />
-    <h3>시음노트 추가</h3>
+    <h3 id="tasting-form-title">시음노트 추가</h3>
     <form id="tasting-form">
       <input type="hidden" name="wine_id" />
+      <input type="hidden" name="note_id" />
       <label>날짜<input type="date" name="note_date" /></label>
-      <label>향<input type="text" name="aroma" /></label>
-      <label>맛<input type="text" name="taste" /></label>
-      <label>바디감<input type="text" name="body" placeholder="예: 미디엄-풀바디" /></label>
+
+      <label>산도<select name="acidity"><option value="">선택 안함</option></select></label>
+      <label>타닌<select name="tannin"><option value="">선택 안함</option></select></label>
+      <label>바디감<select name="body_level"><option value="">선택 안함</option></select></label>
+
+      <div class="aroma-group">
+        <strong>1차향 (과일·꽃·허브)</strong>
+        <div id="aroma-primary-picker"></div>
+      </div>
+      <div class="aroma-group">
+        <strong>2차향 (오크·효모·숙성)</strong>
+        <div id="aroma-secondary-picker"></div>
+      </div>
+
       <label>여운<input type="text" name="finish" /></label>
+      <label>함께 먹은 음식<input type="text" name="food_pairing" placeholder="예: 스테이크, 치즈 플래터" /></label>
       <label>나의 평점(5점 만점)<input type="number" name="my_rating" min="0" max="5" step="0.5" /></label>
       <label>코멘트<textarea name="comment" rows="3"></textarea></label>
-      <button type="submit">시음노트 저장</button>
+      <button type="submit" id="tasting-submit-btn">시음노트 저장</button>
+      <button type="button" id="tasting-cancel-edit-btn" class="ghost-btn hidden">수정 취소</button>
     </form>
     <h3>시음노트 기록</h3>
     <ul id="tasting-notes-list"></ul>

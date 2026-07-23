@@ -30,10 +30,13 @@ create table if not exists tasting_notes (
   wine_id uuid not null references wines(id) on delete cascade,
   owner_id uuid not null references auth.users(id) on delete cascade,
   note_date date not null default current_date,
-  aroma text,
-  taste text,
-  body text,
+  acidity int,                   -- 산도 1~5
+  tannin int,                    -- 타닌 1~5
+  body_level int,                -- 바디감 1~5
+  aroma_primary text[],          -- 1차향 (과일/꽃/허브 등)
+  aroma_secondary text[],        -- 2차향 (오크/효모/숙성 등)
   finish text,
+  food_pairing text,             -- 함께 먹은 음식
   my_rating numeric,
   comment text,
   created_at timestamptz not null default now()

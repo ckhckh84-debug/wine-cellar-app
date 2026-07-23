@@ -122,6 +122,36 @@ button:active { opacity: 0.85; }
 }
 header .ghost-btn { color: white; }
 
+/* Aroma picker */
+.aroma-group { font-size: 0.9em; }
+.aroma-group strong { display: block; margin-bottom: 4px; }
+.aroma-category { margin-bottom: 8px; }
+.aroma-category-label { font-size: 0.85em; color: #8a7a7a; margin-bottom: 4px; }
+.chip-row { display: flex; flex-wrap: wrap; gap: 6px; }
+.chip {
+  padding: 5px 10px;
+  border: 1px solid #d9c9c9;
+  border-radius: 999px;
+  background: none;
+  color: inherit;
+  font-size: 0.85em;
+  cursor: pointer;
+}
+.chip.active {
+  background: #6b1f2a;
+  border-color: #6b1f2a;
+  color: white;
+}
+
+/* Tasting log */
+.tasting-log-list { list-style: none; padding: 0; }
+.tasting-log-list li {
+  padding: 12px 0;
+  border-bottom: 1px solid #eee;
+  font-size: 0.9em;
+}
+.tasting-log-list .log-wine-title { font-weight: 600; }
+
 /* Modal */
 .modal {
   position: fixed;
@@ -156,4 +186,6 @@ header .ghost-btn { color: white; }
   .modal-content { background: #241c1c; }
   #tasting-notes-list li { border-color: #3a2c2c; }
   .ai-box { border-color: #3a2c2c; }
+  .chip { border-color: #4a3a3a; }
+  .tasting-log-list li { border-color: #3a2c2c; }
 }

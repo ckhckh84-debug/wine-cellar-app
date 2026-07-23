@@ -79,6 +79,7 @@ $$(".tab-btn").forEach((btn) => {
     btn.classList.add("active");
     $$(".tab-panel").forEach((p) => p.classList.add("hidden"));
     $(`#tab-${btn.dataset.tab}`).classList.remove("hidden");
+    if (btn.dataset.tab === "log") searchTastingLog();
   });
 });
 
@@ -191,6 +192,114 @@ $("#wine-form").addEventListener("submit", async (e) => {
 // ---------- Wine detail modal & tasting notes ----------
 
 let currentWineId = null;
+let editingNoteId = null;
+const selectedAroma = { primary: new Set(), secondary: new Set() };
+
+const RATING_LABELS = {
+  acidity: ["매우 낮음", "낮음", "보통", "높음", "매우 높음"],
+  tannin: ["매우 부드러움", "부드러움", "보통", "강함", "매우 강함"],
+  body_level: ["라이트", "라이트-미디엄", "미디엄", "미디엄-풀", "풀바디"],
+};
+
+const AROMA_WHEEL = {
+  primary: [
+    { name: "과일향", tags: ["시트러스/레몬", "사과", "배", "복숭아", "열대과일", "체리", "딸기", "라즈베리", "블랙베리", "자두", "무화과", "건포도"] },
+    { name: "꽃향", tags: ["장미", "제비꽃", "아카시아", "오렌지 블러섬", "라벤더"] },
+    { name: "허브·식물향", tags: ["풀", "피망", "민트", "유칼립투스"] },
+    { name: "향신료향", tags: ["후추", "정향", "아니스"] },
+  ],
+  secondary: [
+    { name: "오크향", tags: ["바닐라", "카라멜", "훈연", "토스트", "코코넛"] },
+    { name: "효모·유제품향", tags: ["버터", "요거트", "빵/이스트", "치즈"] },
+    { name: "숙성향", tags: ["견과류", "가죽", "담배", "버섯/흙", "꿀"] },
+  ],
+};
+
+function populateRatingSelects() {
+  for (const field of ["acidity", "tannin", "body_level"]) {
+    const select = $(`#tasting-form [name=${field}]`);
+    RATING_LABELS[field].forEach((label, i) => {
+      const opt = document.createElement("option");
+      opt.value = i + 1;
+      opt.textContent = `${label} (${i + 1})`;
+      select.appendChild(opt);
+    });
+  }
+}
+populateRatingSelects();
+
+function renderAromaPicker(containerId, tier) {
+  const container = $(`#${containerId}`);
+  container.innerHTML = "";
+  for (const category of AROMA_WHEEL[tier]) {
+    const group = document.createElement("div");
+    group.className = "aroma-category";
+    const label = document.createElement("div");
+    label.className = "aroma-category-label";
+    label.textContent = category.name;
+    const row = document.createElement("div");
+    row.className = "chip-row";
+    for (const tag of category.tags) {
+      const chip = document.createElement("button");
+      chip.type = "button";
+      chip.className = "chip";
+      chip.textContent = tag;
+      chip.classList.toggle("active", selectedAroma[tier].has(tag));
+      chip.addEventListener("click", () => {
+        if (selectedAroma[tier].has(tag)) {
+          selectedAroma[tier].delete(tag);
+          chip.classList.remove("active");
+        } else {
+          selectedAroma[tier].add(tag);
+          chip.classList.add("active");
+        }
+      });
+      row.appendChild(chip);
+    }
+    group.appendChild(label);
+    group.appendChild(row);
+    container.appendChild(group);
+  }
+}
+
+function resetTastingForm() {
+  editingNoteId = null;
+  selectedAroma.primary.clear();
+  selectedAroma.secondary.clear();
+  $("#tasting-form").reset();
+  $("#tasting-form [name=wine_id]").value = currentWineId;
+  $("#tasting-form [name=note_id]").value = "";
+  $("#tasting-form [name=note_date]").value = new Date().toISOString().slice(0, 10);
+  $("#tasting-form-title").textContent = "시음노트 추가";
+  $("#tasting-submit-btn").textContent = "시음노트 저장";
+  $("#tasting-cancel-edit-btn").classList.add("hidden");
+  renderAromaPicker("aroma-primary-picker", "primary");
+  renderAromaPicker("aroma-secondary-picker", "secondary");
+}
+
+function startEditNote(note) {
+  editingNoteId = note.id;
+  selectedAroma.primary = new Set(note.aroma_primary || []);
+  selectedAroma.secondary = new Set(note.aroma_secondary || []);
+  const form = $("#tasting-form");
+  form.elements.note_id.value = note.id;
+  form.elements.note_date.value = note.note_date;
+  form.elements.acidity.value = note.acidity ?? "";
+  form.elements.tannin.value = note.tannin ?? "";
+  form.elements.body_level.value = note.body_level ?? "";
+  form.elements.finish.value = note.finish ?? "";
+  form.elements.food_pairing.value = note.food_pairing ?? "";
+  form.elements.my_rating.value = note.my_rating ?? "";
+  form.elements.comment.value = note.comment ?? "";
+  $("#tasting-form-title").textContent = "시음노트 수정";
+  $("#tasting-submit-btn").textContent = "수정 저장";
+  $("#tasting-cancel-edit-btn").classList.remove("hidden");
+  renderAromaPicker("aroma-primary-picker", "primary");
+  renderAromaPicker("aroma-secondary-picker", "secondary");
+  form.scrollIntoView({ behavior: "smooth" });
+}
+
+$("#tasting-cancel-edit-btn").addEventListener("click", resetTastingForm);
 
 async function openWineDetail(wineId) {
   currentWineId = wineId;
@@ -207,8 +316,7 @@ async function openWineDetail(wineId) {
     <p><strong>나의 평점:</strong> ${escapeHtml(w.my_rating ?? "-")}</p>
     <p><strong>페어링 태그:</strong> ${escapeHtml((w.food_pairing_tags || []).join(", ") || "-")}</p>
   `;
-  $("#tasting-form [name=wine_id]").value = wineId;
-  $("#tasting-form [name=note_date]").value = new Date().toISOString().slice(0, 10);
+  resetTastingForm();
   $("#wine-detail-modal").classList.remove("hidden");
   await loadTastingNotes(wineId);
 }
@@ -217,6 +325,37 @@ $("#close-modal-btn").addEventListener("click", () => {
   $("#wine-detail-modal").classList.add("hidden");
   currentWineId = null;
 });
+
+function ratingLabel(field, value) {
+  if (!value) return "-";
+  const label = RATING_LABELS[field]?.[value - 1];
+  return label ? `${label}(${value})` : String(value);
+}
+
+function renderTastingNoteItem(n, { showWineName = false, wine = null } = {}) {
+  const li = document.createElement("li");
+  const aromaText = [...(n.aroma_primary || []), ...(n.aroma_secondary || [])].join(", ") || "-";
+  const wineHeader = showWineName
+    ? `<div class="log-wine-title">${escapeHtml(wine?.name ?? "")} ${wine?.vintage ? `(${escapeHtml(wine.vintage)})` : ""}</div>`
+    : "";
+  li.innerHTML = `
+    ${wineHeader}
+    <strong>${escapeHtml(n.note_date)}</strong> — 평점: ${escapeHtml(n.my_rating ?? "-")}<br/>
+    산도: ${escapeHtml(ratingLabel("acidity", n.acidity))} / 타닌: ${escapeHtml(ratingLabel("tannin", n.tannin))} / 바디: ${escapeHtml(ratingLabel("body_level", n.body_level))} / 여운: ${escapeHtml(n.finish ?? "-")}<br/>
+    향: ${escapeHtml(aromaText)}<br/>
+    ${n.food_pairing ? `함께 먹은 음식: ${escapeHtml(n.food_pairing)}<br/>` : ""}
+    ${n.comment ? escapeHtml(n.comment) + "<br/>" : ""}
+  `;
+  if (!showWineName) {
+    const editBtn = document.createElement("button");
+    editBtn.type = "button";
+    editBtn.className = "ghost-btn";
+    editBtn.textContent = "수정";
+    editBtn.addEventListener("click", () => startEditNote(n));
+    li.appendChild(editBtn);
+  }
+  return li;
+}
 
 async function loadTastingNotes(wineId) {
   const { data, error } = await supabaseClient
@@ -236,13 +375,7 @@ async function loadTastingNotes(wineId) {
     return;
   }
   for (const n of data) {
-    const li = document.createElement("li");
-    li.innerHTML = `
-      <strong>${escapeHtml(n.note_date)}</strong> — 평점: ${escapeHtml(n.my_rating ?? "-")}<br/>
-      향: ${escapeHtml(n.aroma ?? "-")} / 맛: ${escapeHtml(n.taste ?? "-")} / 바디: ${escapeHtml(n.body ?? "-")} / 여운: ${escapeHtml(n.finish ?? "-")}<br/>
-      ${n.comment ? escapeHtml(n.comment) : ""}
-    `;
-    list.appendChild(li);
+    list.appendChild(renderTastingNoteItem(n));
   }
 }
 
@@ -253,22 +386,61 @@ $("#tasting-form").addEventListener("submit", async (e) => {
     wine_id: currentWineId,
     owner_id: state.session.user.id,
     note_date: fd.get("note_date") || new Date().toISOString().slice(0, 10),
-    aroma: fd.get("aroma") || null,
-    taste: fd.get("taste") || null,
-    body: fd.get("body") || null,
+    acidity: fd.get("acidity") ? Number(fd.get("acidity")) : null,
+    tannin: fd.get("tannin") ? Number(fd.get("tannin")) : null,
+    body_level: fd.get("body_level") ? Number(fd.get("body_level")) : null,
+    aroma_primary: [...selectedAroma.primary],
+    aroma_secondary: [...selectedAroma.secondary],
     finish: fd.get("finish") || null,
+    food_pairing: fd.get("food_pairing") || null,
     my_rating: fd.get("my_rating") ? Number(fd.get("my_rating")) : null,
     comment: fd.get("comment") || null,
   };
-  const { error } = await supabaseClient.from("tasting_notes").insert(payload);
+
+  const { error } = editingNoteId
+    ? await supabaseClient.from("tasting_notes").update(payload).eq("id", editingNoteId)
+    : await supabaseClient.from("tasting_notes").insert(payload);
+
   if (error) {
     alert(`오류: ${error.message}`);
     return;
   }
-  e.target.reset();
-  $("#tasting-form [name=wine_id]").value = currentWineId;
+  resetTastingForm();
   loadTastingNotes(currentWineId);
 });
+
+// ---------- Tasting log search ----------
+
+async function searchTastingLog() {
+  const varietyTerm = $("#log-filter-variety").value.trim();
+  const foodTerm = $("#log-filter-food").value.trim();
+
+  let query = supabaseClient
+    .from("tasting_notes")
+    .select("*, wines!inner(name, vintage, variety)")
+    .order("note_date", { ascending: false });
+  if (varietyTerm) query = query.ilike("wines.variety", `%${varietyTerm}%`);
+  if (foodTerm) query = query.ilike("food_pairing", `%${foodTerm}%`);
+
+  const { data, error } = await query;
+  const list = $("#tasting-log-list");
+  const emptyMsg = $("#tasting-log-empty");
+  list.innerHTML = "";
+  if (error) {
+    console.error(error);
+    return;
+  }
+  if (!data || data.length === 0) {
+    emptyMsg.classList.remove("hidden");
+    return;
+  }
+  emptyMsg.classList.add("hidden");
+  for (const n of data) {
+    list.appendChild(renderTastingNoteItem(n, { showWineName: true, wine: n.wines }));
+  }
+}
+
+$("#log-search-btn").addEventListener("click", searchTastingLog);
 
 // ---------- AI settings & assist ----------
 
