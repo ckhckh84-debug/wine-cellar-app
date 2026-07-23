@@ -274,20 +274,20 @@ $("#tasting-form").addEventListener("submit", async (e) => {
 
 function refreshApiKeyStatus() {
   const status = $("#api-key-status");
-  status.textContent = getClaudeApiKey() ? "API 키가 저장되어 있습니다." : "저장된 API 키가 없습니다.";
+  status.textContent = getGeminiApiKey() ? "API 키가 저장되어 있습니다." : "저장된 API 키가 없습니다.";
 }
 
 $("#api-key-form").addEventListener("submit", (e) => {
   e.preventDefault();
   const val = $("#api-key-input").value.trim();
   if (!val) return;
-  setClaudeApiKey(val);
+  setGeminiApiKey(val);
   $("#api-key-input").value = "";
   refreshApiKeyStatus();
 });
 
 $("#clear-api-key-btn").addEventListener("click", () => {
-  setClaudeApiKey(null);
+  setGeminiApiKey(null);
   refreshApiKeyStatus();
 });
 
@@ -329,20 +329,20 @@ $("#lookup-info-btn").addEventListener("click", async () => {
     msg.textContent = "먼저 와인명을 입력해주세요.";
     return;
   }
-  msg.textContent = "검색 중... (웹 검색 사용, 몇 초 걸릴 수 있습니다)";
+  msg.textContent = "확인 중...";
   try {
     const result = await lookupVarietyAndDrinkWindow({
       name,
       producer: form.producer.value.trim(),
       vintage: form.vintage.value.trim(),
     });
-    if (result.confidence === "확인됨") {
+    if (result.confidence === "알고있음") {
       if (result.variety) form.variety.value = result.variety;
       if (result.drink_window_start) form.drink_window_start.value = result.drink_window_start;
       if (result.drink_window_end) form.drink_window_end.value = result.drink_window_end;
-      msg.textContent = `확인됨. 출처: ${result.sources.join(", ") || "명시 안됨"}`;
+      msg.textContent = `AI 지식 기반으로 채웠습니다. ${result.note || ""}`;
     } else {
-      msg.textContent = `${result.confidence}: ${result.note || "출처를 확인할 수 없어 채우지 않았습니다."}`;
+      msg.textContent = `${result.confidence}: ${result.note || "확실하지 않아 채우지 않았습니다."}`;
     }
   } catch (err) {
     msg.textContent = `오류: ${err.message}`;
