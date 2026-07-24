@@ -152,6 +152,9 @@ button:active { opacity: 0.85; }
   padding: 6px 10px;
   font-size: 0.85em;
 }
+.ghost-btn.danger { color: #b3261e; border-color: #b3261e; }
+
+.detail-actions { display: flex; flex-wrap: wrap; gap: 8px; margin: 10px 0; }
 
 /* Aroma picker */
 .aroma-group { font-size: 0.9em; }

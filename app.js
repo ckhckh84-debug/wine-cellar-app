@@ -380,6 +380,41 @@ $("#close-modal-btn").addEventListener("click", () => {
   currentWineId = null;
 });
 
+async function adjustQuantity(delta) {
+  const wine = findWineById(currentWineId);
+  if (!wine) return;
+  const newQuantity = Math.max(0, wine.quantity + delta);
+  const { error } = await supabaseClient
+    .from("wines")
+    .update({ quantity: newQuantity })
+    .eq("id", currentWineId);
+  if (error) {
+    alert(`오류: ${error.message}`);
+    return;
+  }
+  await loadWines();
+  const refreshed = findWineById(currentWineId);
+  if (refreshed) renderWineDetailHeader(refreshed);
+}
+
+$("#qty-dec-btn").addEventListener("click", () => adjustQuantity(-1));
+$("#qty-inc-btn").addEventListener("click", () => adjustQuantity(1));
+
+$("#delete-wine-btn").addEventListener("click", async () => {
+  const wine = findWineById(currentWineId);
+  if (!wine) return;
+  const confirmed = confirm(`"${wine.name}"을(를) 삭제하시겠습니까? 관련 시음노트도 함께 삭제되며 되돌릴 수 없습니다.`);
+  if (!confirmed) return;
+  const { error } = await supabaseClient.from("wines").delete().eq("id", currentWineId);
+  if (error) {
+    alert(`오류: ${error.message}`);
+    return;
+  }
+  $("#wine-detail-modal").classList.add("hidden");
+  currentWineId = null;
+  await loadWines();
+});
+
 function ratingLabel(field, value) {
   if (!value) return "-";
   const label = RATING_LABELS[field]?.[value - 1];
