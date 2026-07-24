@@ -1,6 +1,7 @@
 const state = {
   session: null,
   wines: [],
+  wineHistory: [],
 };
 
 const $ = (sel) => document.querySelector(sel);
@@ -88,16 +89,50 @@ $$(".tab-btn").forEach((btn) => {
 async function loadWines() {
   const { data, error } = await supabaseClient
     .from("wines")
-    .select("*")
-    .order("created_at", { ascending: false });
+    .select("*, tasting_notes(*)")
+    .order("created_at", { ascending: false })
+    .order("note_date", { foreignTable: "tasting_notes", ascending: false });
 
   if (error) {
     console.error(error);
     return;
   }
-  state.wines = data;
+  state.wines = data.filter((w) => !w.tasting_notes || w.tasting_notes.length === 0);
+  state.wineHistory = data.filter((w) => w.tasting_notes && w.tasting_notes.length > 0);
   renderWineTable();
   renderDrinkWindowAlert();
+  renderHistory();
+}
+
+function findWineById(id) {
+  return state.wines.find((x) => x.id === id) || state.wineHistory.find((x) => x.id === id);
+}
+
+function renderHistory() {
+  const list = $("#history-list");
+  const emptyMsg = $("#history-empty");
+  list.innerHTML = "";
+  if (!state.wineHistory || state.wineHistory.length === 0) {
+    emptyMsg.classList.remove("hidden");
+    return;
+  }
+  emptyMsg.classList.add("hidden");
+  for (const w of state.wineHistory) {
+    const li = document.createElement("li");
+    li.className = "wine-history-card";
+    li.innerHTML = `
+      <div class="log-wine-title">${escapeHtml(w.name)} ${w.vintage ? `(${escapeHtml(w.vintage)})` : ""}</div>
+      <div class="muted">${escapeHtml([w.producer, w.variety].filter(Boolean).join(" · "))}</div>
+      <div class="muted">시음노트 ${w.tasting_notes.length}건</div>
+    `;
+    const viewBtn = document.createElement("button");
+    viewBtn.type = "button";
+    viewBtn.className = "ghost-btn";
+    viewBtn.textContent = "상세/시음노트 보기";
+    viewBtn.addEventListener("click", () => openWineDetail(w.id));
+    li.appendChild(viewBtn);
+    list.appendChild(li);
+  }
 }
 
 function renderDrinkWindowAlert() {
@@ -318,7 +353,7 @@ $("#tasting-cancel-edit-btn").addEventListener("click", resetTastingForm);
 
 async function openWineDetail(wineId) {
   currentWineId = wineId;
-  const w = state.wines.find((x) => x.id === wineId);
+  const w = findWineById(wineId);
   if (!w) return;
 
   $("#wine-detail-body").innerHTML = `
@@ -349,17 +384,29 @@ function ratingLabel(field, value) {
 
 function renderTastingNoteItem(n, { showWineName = false, wine = null } = {}) {
   const li = document.createElement("li");
-  const aromaText = [...(n.aroma_primary || []), ...(n.aroma_secondary || [])].join(", ") || "-";
+  li.className = "tasting-card";
+  const aromaTags = [...(n.aroma_primary || []), ...(n.aroma_secondary || [])];
   const wineHeader = showWineName
     ? `<div class="log-wine-title">${escapeHtml(wine?.name ?? "")} ${wine?.vintage ? `(${escapeHtml(wine.vintage)})` : ""}</div>`
     : "";
+  const aromaChips = aromaTags.length
+    ? `<div class="tasting-card-aromas">${aromaTags.map((t) => `<span class="chip static">${escapeHtml(t)}</span>`).join("")}</div>`
+    : "";
   li.innerHTML = `
     ${wineHeader}
-    <strong>${escapeHtml(n.note_date)}</strong> — 평점: ${escapeHtml(n.my_rating ?? "-")}<br/>
-    산도: ${escapeHtml(ratingLabel("acidity", n.acidity))} / 타닌: ${escapeHtml(ratingLabel("tannin", n.tannin))} / 바디: ${escapeHtml(ratingLabel("body_level", n.body_level))} / 여운: ${escapeHtml(n.finish ?? "-")}<br/>
-    향: ${escapeHtml(aromaText)}<br/>
-    ${n.food_pairing ? `함께 먹은 음식: ${escapeHtml(n.food_pairing)}<br/>` : ""}
-    ${n.comment ? escapeHtml(n.comment) + "<br/>" : ""}
+    <div class="tasting-card-header">
+      <span class="tasting-card-date">${escapeHtml(n.note_date)}</span>
+      <span class="tasting-card-rating">${n.my_rating != null ? `★ ${escapeHtml(n.my_rating)}` : "-"}</span>
+    </div>
+    <div class="tasting-card-ratings">
+      <span>산도 ${escapeHtml(ratingLabel("acidity", n.acidity))}</span>
+      <span>타닌 ${escapeHtml(ratingLabel("tannin", n.tannin))}</span>
+      <span>바디 ${escapeHtml(ratingLabel("body_level", n.body_level))}</span>
+      ${n.finish ? `<span>여운 ${escapeHtml(n.finish)}</span>` : ""}
+    </div>
+    ${aromaChips}
+    ${n.food_pairing ? `<div class="tasting-card-food muted">🍽 ${escapeHtml(n.food_pairing)}</div>` : ""}
+    ${n.comment ? `<div class="tasting-card-comment">${escapeHtml(n.comment)}</div>` : ""}
   `;
   if (!showWineName) {
     const editBtn = document.createElement("button");
@@ -422,6 +469,7 @@ $("#tasting-form").addEventListener("submit", async (e) => {
   }
   resetTastingForm();
   loadTastingNotes(currentWineId);
+  loadWines();
 });
 
 // ---------- Tasting log search ----------
