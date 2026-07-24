@@ -54,7 +54,7 @@
       </table>
       <p id="empty-msg" class="muted hidden">등록된 와인이 없습니다. "와인 추가" 탭에서 추가해보세요.</p>
     </div>
-    <p class="muted">시음노트를 남긴 와인은 자동으로 "히스토리" 탭으로 이동합니다.</p>
+    <p class="muted">시음노트를 추가하면 수량이 1병 줄어듭니다. 수량이 0이 되면 "히스토리" 탭으로 자동 이동합니다.</p>
   </section>
 
   <section id="tab-history" class="tab-panel hidden">
@@ -183,6 +183,7 @@
     <div id="wine-detail-body"></div>
     <hr />
     <h3 id="tasting-form-title">시음노트 추가</h3>
+    <p class="muted">새 시음노트를 저장하면 이 와인의 재고 수량이 1병 줄어듭니다.</p>
     <form id="tasting-form">
       <input type="hidden" name="wine_id" />
       <input type="hidden" name="note_id" />

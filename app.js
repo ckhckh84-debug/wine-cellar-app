@@ -97,8 +97,8 @@ async function loadWines() {
     console.error(error);
     return;
   }
-  state.wines = data.filter((w) => !w.tasting_notes || w.tasting_notes.length === 0);
-  state.wineHistory = data.filter((w) => w.tasting_notes && w.tasting_notes.length > 0);
+  state.wines = data.filter((w) => w.quantity > 0);
+  state.wineHistory = data.filter((w) => w.quantity <= 0);
   renderWineTable();
   renderDrinkWindowAlert();
   renderHistory();
@@ -351,11 +351,7 @@ function startEditNote(note) {
 
 $("#tasting-cancel-edit-btn").addEventListener("click", resetTastingForm);
 
-async function openWineDetail(wineId) {
-  currentWineId = wineId;
-  const w = findWineById(wineId);
-  if (!w) return;
-
+function renderWineDetailHeader(w) {
   $("#wine-detail-body").innerHTML = `
     <h2>${escapeHtml(w.name)} ${w.vintage ? `(${escapeHtml(w.vintage)})` : ""}</h2>
     <p><strong>생산자:</strong> ${escapeHtml(w.producer ?? "-")}</p>
@@ -366,6 +362,14 @@ async function openWineDetail(wineId) {
     <p><strong>나의 평점:</strong> ${escapeHtml(w.my_rating ?? "-")}</p>
     <p><strong>페어링 태그:</strong> ${escapeHtml((w.food_pairing_tags || []).join(", ") || "-")}</p>
   `;
+}
+
+async function openWineDetail(wineId) {
+  currentWineId = wineId;
+  const w = findWineById(wineId);
+  if (!w) return;
+
+  renderWineDetailHeader(w);
   resetTastingForm();
   $("#wine-detail-modal").classList.remove("hidden");
   await loadTastingNotes(wineId);
@@ -443,6 +447,7 @@ async function loadTastingNotes(wineId) {
 
 $("#tasting-form").addEventListener("submit", async (e) => {
   e.preventDefault();
+  const isNewNote = !editingNoteId;
   const fd = new FormData(e.target);
   const payload = {
     wine_id: currentWineId,
@@ -467,9 +472,22 @@ $("#tasting-form").addEventListener("submit", async (e) => {
     alert(`오류: ${error.message}`);
     return;
   }
+
+  if (isNewNote) {
+    const wine = findWineById(currentWineId);
+    const newQuantity = Math.max(0, (wine?.quantity ?? 1) - 1);
+    const { error: qtyError } = await supabaseClient
+      .from("wines")
+      .update({ quantity: newQuantity })
+      .eq("id", currentWineId);
+    if (qtyError) console.error(qtyError);
+  }
+
   resetTastingForm();
   loadTastingNotes(currentWineId);
-  loadWines();
+  await loadWines();
+  const refreshedWine = findWineById(currentWineId);
+  if (refreshedWine) renderWineDetailHeader(refreshedWine);
 });
 
 // ---------- Tasting log search ----------
