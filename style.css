@@ -123,6 +123,9 @@ th { color: var(--muted); font-weight: 600; }
 .ai-box input[type="file"] { display: block; margin: 8px 0; font-size: 0.85em; }
 .ai-box button { margin-top: 4px; }
 
+.log-filters summary { cursor: pointer; font-weight: 600; }
+.log-filters form { margin-top: 12px; max-width: none; }
+
 /* Forms */
 form { display: flex; flex-direction: column; gap: 10px; max-width: 480px; }
 form label { display: flex; flex-direction: column; font-size: 0.9em; gap: 4px; }

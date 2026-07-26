@@ -455,7 +455,26 @@ function renderTastingNoteItem(n, { showWineName = false, wine = null } = {}) {
     editBtn.addEventListener("click", () => startEditNote(n));
     li.appendChild(editBtn);
   }
+  const deleteBtn = document.createElement("button");
+  deleteBtn.type = "button";
+  deleteBtn.className = "ghost-btn danger";
+  deleteBtn.textContent = "삭제";
+  deleteBtn.addEventListener("click", () => deleteTastingNote(n));
+  li.appendChild(deleteBtn);
   return li;
+}
+
+async function deleteTastingNote(note) {
+  const confirmed = confirm("이 시음노트를 삭제하시겠습니까? 되돌릴 수 없습니다. (재고 수량은 자동으로 복원되지 않습니다.)");
+  if (!confirmed) return;
+  const { error } = await supabaseClient.from("tasting_notes").delete().eq("id", note.id);
+  if (error) {
+    alert(`오류: ${error.message}`);
+    return;
+  }
+  if (currentWineId) await loadTastingNotes(currentWineId);
+  await loadWines();
+  if (!$("#tab-log").classList.contains("hidden")) searchTastingLog();
 }
 
 async function loadTastingNotes(wineId) {
