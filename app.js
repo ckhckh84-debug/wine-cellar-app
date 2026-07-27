@@ -102,6 +102,7 @@ async function loadWines() {
   renderWineTable();
   renderDrinkWindowAlert();
   renderHistory();
+  renderDashboard();
 }
 
 function findWineById(id) {
@@ -155,18 +156,118 @@ function renderDrinkWindowAlert() {
   alertEl.innerHTML = `<strong>⚠ 음용 시기 확인 필요</strong><ul>${items}</ul>`;
 }
 
+const OLD_WORLD_COUNTRIES = new Set([
+  "프랑스", "이탈리아", "스페인", "독일", "포르투갈", "오스트리아",
+  "그리스", "헝가리", "조지아", "스위스", "루마니아", "불가리아",
+  "크로아티아", "슬로베니아", "몰도바",
+]);
+const NEW_WORLD_COUNTRIES = new Set([
+  "미국", "칠레", "아르헨티나", "호주", "뉴질랜드", "남아공",
+  "캐나다", "우루과이", "브라질", "멕시코",
+]);
+
+function classifyWorld(country) {
+  if (!country) return "미분류";
+  const c = country.trim();
+  if (OLD_WORLD_COUNTRIES.has(c)) return "구대륙";
+  if (NEW_WORLD_COUNTRIES.has(c)) return "신대륙";
+  return "미분류";
+}
+
+function renderBarChart(containerId, pairs) {
+  const container = $(`#${containerId}`);
+  if (pairs.length === 0) {
+    container.innerHTML = `<p class="muted">데이터 없음</p>`;
+    return;
+  }
+  const max = Math.max(...pairs.map((p) => p.value));
+  container.innerHTML = pairs
+    .map(
+      (p) => `
+      <div class="bar-row">
+        <span class="bar-label">${escapeHtml(p.label)}</span>
+        <div class="bar-track"><div class="bar-fill" style="width:${Math.max(4, (p.value / max) * 100)}%"></div></div>
+        <span class="bar-value">${escapeHtml(p.value)}</span>
+      </div>`
+    )
+    .join("");
+}
+
+function tallyByQuantity(wines, keyFn) {
+  const totals = new Map();
+  for (const w of wines) {
+    const key = keyFn(w) || "미상";
+    totals.set(key, (totals.get(key) || 0) + (w.quantity || 0));
+  }
+  return [...totals.entries()].map(([label, value]) => ({ label, value }));
+}
+
+function renderDashboard() {
+  const wines = state.wines;
+  const totalBottles = wines.reduce((sum, w) => sum + (w.quantity || 0), 0);
+  const countryCount = new Set(wines.map((w) => w.country).filter(Boolean)).size;
+  const varietyCount = new Set(wines.map((w) => w.variety).filter(Boolean)).size;
+
+  $("#kpi-row").innerHTML = `
+    <div class="stat-tile"><div class="stat-value">${escapeHtml(totalBottles)}</div><div class="stat-label">총 보유 병수</div></div>
+    <div class="stat-tile"><div class="stat-value">${escapeHtml(wines.length)}</div><div class="stat-label">보유 와인 종류</div></div>
+    <div class="stat-tile"><div class="stat-value">${escapeHtml(countryCount)}</div><div class="stat-label">보유 국가 수</div></div>
+    <div class="stat-tile"><div class="stat-value">${escapeHtml(varietyCount)}</div><div class="stat-label">보유 품종 수</div></div>
+  `;
+
+  const byStyle = tallyByQuantity(wines, (w) => w.style).sort((a, b) => b.value - a.value);
+  renderBarChart("chart-style", byStyle);
+
+  const byWorld = tallyByQuantity(wines, (w) => classifyWorld(w.country)).sort((a, b) => b.value - a.value);
+  renderBarChart("chart-world", byWorld);
+
+  const byCountry = tallyByQuantity(wines, (w) => w.country)
+    .sort((a, b) => b.value - a.value)
+    .slice(0, 8);
+  renderBarChart("chart-country", byCountry);
+
+  const byVariety = tallyByQuantity(wines, (w) => w.variety)
+    .sort((a, b) => b.value - a.value)
+    .slice(0, 8);
+  renderBarChart("chart-variety", byVariety);
+
+  const byVintage = tallyByQuantity(wines, (w) => (w.vintage ? String(w.vintage) : null)).sort(
+    (a, b) => Number(a.label) - Number(b.label)
+  );
+  renderBarChart("chart-vintage", byVintage);
+}
+
+function getFilteredWines() {
+  const styleFilter = $("#cellar-filter-style").value;
+  const worldFilter = $("#cellar-filter-world").value;
+  return state.wines.filter((w) => {
+    if (styleFilter && w.style !== styleFilter) return false;
+    if (worldFilter && classifyWorld(w.country) !== worldFilter) return false;
+    return true;
+  });
+}
+
+$("#cellar-filter-style").addEventListener("change", renderWineTable);
+$("#cellar-filter-world").addEventListener("change", renderWineTable);
+
 function renderWineTable() {
   const body = $("#wine-table-body");
   const emptyMsg = $("#empty-msg");
   body.innerHTML = "";
 
-  if (state.wines.length === 0) {
+  const visibleWines = getFilteredWines();
+
+  if (visibleWines.length === 0) {
     emptyMsg.classList.remove("hidden");
+    emptyMsg.textContent =
+      state.wines.length === 0
+        ? '등록된 와인이 없습니다. "와인 추가" 탭에서 추가해보세요.'
+        : "조건에 맞는 와인이 없습니다.";
     return;
   }
   emptyMsg.classList.add("hidden");
 
-  for (const w of state.wines) {
+  for (const w of visibleWines) {
     const tr = document.createElement("tr");
     tr.dataset.id = w.id;
     const drinkWindow =

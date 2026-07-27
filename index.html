@@ -38,6 +38,38 @@
 
   <section id="tab-cellar" class="tab-panel">
     <div id="drink-window-alert" class="alert hidden"></div>
+
+    <div id="kpi-row" class="kpi-row"></div>
+
+    <div class="chart-grid">
+      <div class="chart-card"><h4>스타일별 보유 병수</h4><div id="chart-style" class="bar-chart"></div></div>
+      <div class="chart-card"><h4>구대륙 · 신대륙</h4><div id="chart-world" class="bar-chart"></div></div>
+      <div class="chart-card"><h4>국가별 보유 병수</h4><div id="chart-country" class="bar-chart"></div></div>
+      <div class="chart-card"><h4>품종별 보유 병수</h4><div id="chart-variety" class="bar-chart"></div></div>
+      <div class="chart-card"><h4>빈티지별 보유 병수</h4><div id="chart-vintage" class="bar-chart"></div></div>
+    </div>
+
+    <div class="list-filters">
+      <label>스타일
+        <select id="cellar-filter-style">
+          <option value="">전체</option>
+          <option value="레드">레드</option>
+          <option value="화이트">화이트</option>
+          <option value="스파클링">스파클링</option>
+          <option value="로제">로제</option>
+          <option value="주정강화">주정강화</option>
+          <option value="기타">기타</option>
+        </select>
+      </label>
+      <label>대륙
+        <select id="cellar-filter-world">
+          <option value="">전체</option>
+          <option value="구대륙">구대륙</option>
+          <option value="신대륙">신대륙</option>
+        </select>
+      </label>
+    </div>
+
     <div class="table-wrap">
       <table id="wine-table">
         <thead>
