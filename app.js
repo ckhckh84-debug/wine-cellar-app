@@ -491,6 +491,10 @@ function startEditNote(note) {
 $("#tasting-cancel-edit-btn").addEventListener("click", resetTastingForm);
 
 function renderWineDetailHeader(w) {
+  const drinkWindow =
+    w.drink_window_start || w.drink_window_end
+      ? `${w.drink_window_start ?? "?"}–${w.drink_window_end ?? "?"}`
+      : "-";
   $("#wine-detail-body").innerHTML = `
     <h2>${escapeHtml(w.name)} ${w.vintage ? `(${escapeHtml(w.vintage)})` : ""}</h2>
     <p><strong>생산자:</strong> ${escapeHtml(w.producer ?? "-")}</p>
@@ -498,6 +502,8 @@ function renderWineDetailHeader(w) {
     <p><strong>원산지:</strong> ${escapeHtml([w.region, w.country].filter(Boolean).join(", ") || "-")}</p>
     <p><strong>스타일:</strong> ${escapeHtml(w.style ?? "-")}</p>
     <p><strong>수량:</strong> ${escapeHtml(w.quantity)} · <strong>보관위치:</strong> ${escapeHtml(w.storage_location ?? "-")}</p>
+    <p><strong>구매일:</strong> ${escapeHtml(w.purchase_date ?? "-")} · <strong>구매가:</strong> ${escapeHtml(w.price ?? "-")}</p>
+    <p><strong>적정 음용시기:</strong> ${escapeHtml(drinkWindow)}</p>
     <p><strong>나의 평점:</strong> ${escapeHtml(w.my_rating ?? "-")}</p>
     <p><strong>페어링 태그:</strong> ${escapeHtml((w.food_pairing_tags || []).join(", ") || "-")}</p>
   `;
@@ -609,6 +615,7 @@ $("#wine-edit-form").addEventListener("submit", async (e) => {
     msg.textContent = `오류: ${error.message}`;
     return;
   }
+  alert("저장되었습니다.");
   $("#wine-edit-form").classList.add("hidden");
   await loadWines();
   const refreshed = findWineById(currentWineId);
