@@ -174,6 +174,44 @@ function classifyWorld(country) {
   return "미분류";
 }
 
+const COUNTRY_ALIASES = {
+  france: "프랑스",
+  italy: "이탈리아",
+  spain: "스페인",
+  germany: "독일",
+  portugal: "포르투갈",
+  austria: "오스트리아",
+  greece: "그리스",
+  hungary: "헝가리",
+  georgia: "조지아",
+  switzerland: "스위스",
+  romania: "루마니아",
+  bulgaria: "불가리아",
+  croatia: "크로아티아",
+  slovenia: "슬로베니아",
+  moldova: "몰도바",
+  usa: "미국",
+  us: "미국",
+  "united states": "미국",
+  "united states of america": "미국",
+  chile: "칠레",
+  argentina: "아르헨티나",
+  australia: "호주",
+  "new zealand": "뉴질랜드",
+  "south africa": "남아공",
+  canada: "캐나다",
+  uruguay: "우루과이",
+  brazil: "브라질",
+  mexico: "멕시코",
+};
+
+function normalizeCountry(input) {
+  if (!input) return input;
+  const trimmed = input.trim();
+  const canonical = COUNTRY_ALIASES[trimmed.toLowerCase()];
+  return canonical || trimmed;
+}
+
 function renderBarChart(containerId, pairs) {
   const container = $(`#${containerId}`);
   if (pairs.length === 0) {
@@ -303,7 +341,7 @@ $("#wine-form").addEventListener("submit", async (e) => {
     producer: fd.get("producer") || null,
     variety: fd.get("variety") || null,
     region: fd.get("region") || null,
-    country: fd.get("country") || null,
+    country: normalizeCountry(fd.get("country")) || null,
     style: fd.get("style") || null,
     quantity: fd.get("quantity") ? Number(fd.get("quantity")) : 1,
     storage_location: fd.get("storage_location") || null,
@@ -514,6 +552,67 @@ $("#delete-wine-btn").addEventListener("click", async () => {
   $("#wine-detail-modal").classList.add("hidden");
   currentWineId = null;
   await loadWines();
+});
+
+$("#edit-wine-btn").addEventListener("click", () => {
+  const wine = findWineById(currentWineId);
+  if (!wine) return;
+  const form = $("#wine-edit-form");
+  form.elements.name.value = wine.name ?? "";
+  form.elements.vintage.value = wine.vintage ?? "";
+  form.elements.producer.value = wine.producer ?? "";
+  form.elements.variety.value = wine.variety ?? "";
+  form.elements.region.value = wine.region ?? "";
+  form.elements.country.value = wine.country ?? "";
+  form.elements.style.value = wine.style ?? "레드";
+  form.elements.quantity.value = wine.quantity ?? "";
+  form.elements.storage_location.value = wine.storage_location ?? "";
+  form.elements.purchase_date.value = wine.purchase_date ?? "";
+  form.elements.price.value = wine.price ?? "";
+  form.elements.drink_window_start.value = wine.drink_window_start ?? "";
+  form.elements.drink_window_end.value = wine.drink_window_end ?? "";
+  form.elements.food_pairing_tags.value = (wine.food_pairing_tags || []).join(", ");
+  form.elements.my_rating.value = wine.my_rating ?? "";
+  $("#wine-edit-message").textContent = "";
+  form.classList.remove("hidden");
+  form.scrollIntoView({ behavior: "smooth" });
+});
+
+$("#wine-edit-cancel-btn").addEventListener("click", () => {
+  $("#wine-edit-form").classList.add("hidden");
+});
+
+$("#wine-edit-form").addEventListener("submit", async (e) => {
+  e.preventDefault();
+  const fd = new FormData(e.target);
+  const msg = $("#wine-edit-message");
+  const tags = fd.get("food_pairing_tags");
+  const payload = {
+    name: fd.get("name"),
+    vintage: fd.get("vintage") ? Number(fd.get("vintage")) : null,
+    producer: fd.get("producer") || null,
+    variety: fd.get("variety") || null,
+    region: fd.get("region") || null,
+    country: normalizeCountry(fd.get("country")) || null,
+    style: fd.get("style") || null,
+    quantity: fd.get("quantity") ? Number(fd.get("quantity")) : 0,
+    storage_location: fd.get("storage_location") || null,
+    purchase_date: fd.get("purchase_date") || null,
+    price: fd.get("price") ? Number(fd.get("price")) : null,
+    drink_window_start: fd.get("drink_window_start") ? Number(fd.get("drink_window_start")) : null,
+    drink_window_end: fd.get("drink_window_end") ? Number(fd.get("drink_window_end")) : null,
+    food_pairing_tags: tags ? tags.split(",").map((t) => t.trim()).filter(Boolean) : null,
+    my_rating: fd.get("my_rating") ? Number(fd.get("my_rating")) : null,
+  };
+  const { error } = await supabaseClient.from("wines").update(payload).eq("id", currentWineId);
+  if (error) {
+    msg.textContent = `오류: ${error.message}`;
+    return;
+  }
+  $("#wine-edit-form").classList.add("hidden");
+  await loadWines();
+  const refreshed = findWineById(currentWineId);
+  if (refreshed) renderWineDetailHeader(refreshed);
 });
 
 function ratingLabel(field, value) {
