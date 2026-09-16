@@ -212,7 +212,7 @@ function normalizeCountry(input) {
   return canonical || trimmed;
 }
 
-function renderBarChart(containerId, pairs) {
+function renderBarChart(containerId, pairs, filterType) {
   const container = $(`#${containerId}`);
   if (pairs.length === 0) {
     container.innerHTML = `<p class="muted">데이터 없음</p>`;
@@ -222,13 +222,18 @@ function renderBarChart(containerId, pairs) {
   container.innerHTML = pairs
     .map(
       (p) => `
-      <div class="bar-row">
+      <div class="bar-row${filterType ? " bar-row-clickable" : ""}" data-label="${escapeHtml(p.label)}">
         <span class="bar-label">${escapeHtml(p.label)}</span>
         <div class="bar-track"><div class="bar-fill" style="width:${Math.max(4, (p.value / max) * 100)}%"></div></div>
         <span class="bar-value">${escapeHtml(p.value)}</span>
       </div>`
     )
     .join("");
+  if (filterType) {
+    container.querySelectorAll(".bar-row").forEach((row) => {
+      row.addEventListener("click", () => applyCategoryFilter(filterType, row.dataset.label));
+    });
+  }
 }
 
 function tallyByQuantity(wines, keyFn) {
@@ -254,44 +259,97 @@ function renderDashboard() {
   `;
 
   const byStyle = tallyByQuantity(wines, (w) => w.style).sort((a, b) => b.value - a.value);
-  renderBarChart("chart-style", byStyle);
+  renderBarChart("chart-style", byStyle, "style");
 
   const byWorld = tallyByQuantity(wines, (w) => classifyWorld(w.country)).sort((a, b) => b.value - a.value);
-  renderBarChart("chart-world", byWorld);
+  renderBarChart("chart-world", byWorld, "world");
 
   const byCountry = tallyByQuantity(wines, (w) => w.country)
     .sort((a, b) => b.value - a.value)
     .slice(0, 8);
-  renderBarChart("chart-country", byCountry);
+  renderBarChart("chart-country", byCountry, "country");
 
   const byVariety = tallyByQuantity(wines, (w) => w.variety)
     .sort((a, b) => b.value - a.value)
     .slice(0, 8);
-  renderBarChart("chart-variety", byVariety);
+  renderBarChart("chart-variety", byVariety, "variety");
 
   const byVintage = tallyByQuantity(wines, (w) => (w.vintage ? String(w.vintage) : null)).sort(
     (a, b) => Number(a.label) - Number(b.label)
   );
-  renderBarChart("chart-vintage", byVintage);
+  renderBarChart("chart-vintage", byVintage, "vintage");
 }
 
+const CATEGORY_FILTER_LABELS = { style: "스타일", world: "대륙", country: "국가", variety: "품종", vintage: "빈티지" };
+let cellarFilters = { style: null, world: null, country: null, variety: null, vintage: null };
+
 function getFilteredWines() {
-  const styleFilter = $("#cellar-filter-style").value;
-  const worldFilter = $("#cellar-filter-world").value;
   return state.wines.filter((w) => {
-    if (styleFilter && w.style !== styleFilter) return false;
-    if (worldFilter && classifyWorld(w.country) !== worldFilter) return false;
+    if (cellarFilters.style && w.style !== cellarFilters.style) return false;
+    if (cellarFilters.world && classifyWorld(w.country) !== cellarFilters.world) return false;
+    if (cellarFilters.country && (w.country || "미상") !== cellarFilters.country) return false;
+    if (cellarFilters.variety && (w.variety || "미상") !== cellarFilters.variety) return false;
+    if (cellarFilters.vintage && (w.vintage ? String(w.vintage) : "미상") !== cellarFilters.vintage) return false;
     return true;
   });
 }
 
-$("#cellar-filter-style").addEventListener("change", renderWineTable);
-$("#cellar-filter-world").addEventListener("change", renderWineTable);
+function renderActiveFilterChip() {
+  const container = $("#active-filter-chip");
+  const activeTypes = Object.keys(cellarFilters).filter((k) => cellarFilters[k]);
+  if (activeTypes.length === 0) {
+    container.classList.add("hidden");
+    container.innerHTML = "";
+    return;
+  }
+  container.classList.remove("hidden");
+  const labels = activeTypes
+    .map((t) => `${escapeHtml(CATEGORY_FILTER_LABELS[t])}: ${escapeHtml(cellarFilters[t])}`)
+    .join(" · ");
+  container.innerHTML = `<button type="button" class="chip active" id="clear-filter-chip">${labels} ✕</button>`;
+  $("#clear-filter-chip").addEventListener("click", clearCategoryFilter);
+}
+
+function applyCategoryFilter(type, value) {
+  cellarFilters = { style: null, world: null, country: null, variety: null, vintage: null };
+  cellarFilters[type] = value;
+  $("#cellar-filter-style").value = type === "style" ? value : "";
+  $("#cellar-filter-world").value = type === "world" ? value : "";
+  renderWineTable();
+  renderActiveFilterChip();
+  $("#wine-table-body").closest(".table-wrap").scrollIntoView({ behavior: "smooth", block: "start" });
+}
+
+function clearCategoryFilter() {
+  cellarFilters = { style: null, world: null, country: null, variety: null, vintage: null };
+  $("#cellar-filter-style").value = "";
+  $("#cellar-filter-world").value = "";
+  renderWineTable();
+  renderActiveFilterChip();
+}
+
+$("#cellar-filter-style").addEventListener("change", (e) => {
+  cellarFilters.country = null;
+  cellarFilters.variety = null;
+  cellarFilters.vintage = null;
+  cellarFilters.style = e.target.value || null;
+  renderWineTable();
+  renderActiveFilterChip();
+});
+$("#cellar-filter-world").addEventListener("change", (e) => {
+  cellarFilters.country = null;
+  cellarFilters.variety = null;
+  cellarFilters.vintage = null;
+  cellarFilters.world = e.target.value || null;
+  renderWineTable();
+  renderActiveFilterChip();
+});
 
 function renderWineTable() {
   const body = $("#wine-table-body");
   const emptyMsg = $("#empty-msg");
   body.innerHTML = "";
+  renderActiveFilterChip();
 
   const visibleWines = getFilteredWines();
 
